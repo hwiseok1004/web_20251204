@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CHECKMATE - How to Play</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- GSAP for Animations -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@200;400;600;800&family=Oswald:wght@300;500;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@100;300;400;500;700;900&display=swap');
+
+        :root {
+            --bg-color: #0a0a0a;
+            --text-color: #f3f3f3;
+            --accent: #ff3333;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Manrope', 'Noto Sans KR', sans-serif;
+            overflow-x: hidden;
+            cursor: none; 
+        }
+
+        h1, h2, h3, .brand-font {
+            font-family: 'Oswald', sans-serif;
+            text-transform: uppercase;
+        }
+
+        /* Custom Cursor */
+        .cursor-dot, .cursor-outline {
+            position: fixed; top: 0; left: 0;
+            transform: translate(-50%, -50%);
+            border-radius: 50%; z-index: 9999;
+            pointer-events: none; mix-blend-mode: difference;
+        }
+        .cursor-dot { width: 8px; height: 8px; background-color: white; }
+        .cursor-outline {
+            width: 40px; height: 40px;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            transition: width 0.2s, height 0.2s, background-color 0.2s;
+        }
+        body.hovering .cursor-outline {
+            width: 80px; height: 80px;
+            background-color: rgba(255, 255, 255, 0.1); border-color: transparent;
+        }
+
+        /* Typography & Layout */
+        .text-huge {
+            font-size: clamp(3rem, 10vw, 8rem);
+            line-height: 0.9; letter-spacing: -0.03em;
+        }
+        
+        .rule-card {
+            border: 1px solid #333;
+            transition: all 0.4s ease;
+        }
+        .rule-card:hover {
+            border-color: var(--accent);
+            background: #111;
+            transform: translateY(-5px);
+        }
+
+        .piece-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body class="antialiased selection:bg-[#ff3333] selection:text-white">
+
+    <div class="cursor-dot"></div>
+    <div class="cursor-outline"></div>
+
+    <!-- Navigation -->
+    <nav class="fixed top-0 w-full p-6 flex justify-between items-center z-50 mix-blend-difference">
+        <!-- FIX: Changed onclick div to a tag for better navigation support -->
+        <a href="index.html" class="text-2xl font-bold tracking-tighter brand-font hoverable cursor-pointer block">CHECKMATE</a>
+        <div class="flex gap-8 text-sm uppercase tracking-widest hidden md:flex">
+            <a href="index.html" class="hover:text-gray-400 transition-colors hoverable">Home</a>
+            <span class="text-[#ff3333]">How to Play</span>
+        </div>
+        <div class="md:hidden hoverable">Menu</div>
+    </nav>
+
+    <main>
+        <!-- Hero Section -->
+        <section class="min-h-[60vh] flex flex-col justify-end px-6 md:px-12 pb-20 border-b border-gray-800">
+            <div class="hero-text opacity-0 translate-y-20">
+                <p class="text-sm md:text-base uppercase tracking-[0.2em] mb-4 text-[#ff3333]">The Manual</p>
+                <h1 class="text-huge font-bold uppercase mb-2">Game</h1>
+                <h1 class="text-huge font-bold uppercase ml-8 md:ml-24 text-gray-500">Rules</h1>
+            </div>
+        </section>
+
+        <!-- 1. Objective -->
+        <section class="py-24 px-6 md:px-12 border-b border-gray-800 flex flex-col md:flex-row gap-12">
+            <div class="md:w-1/3">
+                <h2 class="text-5xl font-bold uppercase brand-font mb-4">01. Objective</h2>
+                <p class="text-gray-500">게임의 목표</p>
+            </div>
+            <div class="md:w-2/3 space-y-8">
+                <div class="text-xl leading-relaxed text-gray-300">
+                    체스는 <strong class="text-white">백(White)</strong>과 <strong class="text-white">흑(Black)</strong>이 싸우는 전략 게임입니다. 
+                    상대방의 <strong class="text-[#ff3333]">킹(King)</strong>을 잡아낼 수 없는 막다른 곳으로 몰아넣는 것이 최종 목표입니다.
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-[#111] p-8 border-l-4 border-yellow-500 hoverable">
+                        <h3 class="text-2xl font-bold mb-2">체크 (Check)</h3>
+                        <p class="text-sm text-gray-400">킹이 공격당하고 있지만, 피하거나 막을 수 있는 상태.</p>
+                    </div>
+                    <div class="bg-[#111] p-8 border-l-4 border-[#ff3333] hoverable">
+                        <h3 class="text-2xl font-bold mb-2">체크메이트 (Checkmate)</h3>
+                        <p class="text-sm text-gray-400">킹이 공격당하고 있고, <span class="text-white font-bold underline">절대 피할 수 없는</span> 상태. (게임 승리)</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. Setup -->
+        <section class="py-24 px-6 md:px-12 border-b border-gray-800 flex flex-col md:flex-row gap-12 bg-[#0f0f0f]">
+            <div class="md:w-1/3">
+                <h2 class="text-5xl font-bold uppercase brand-font mb-4">02. Setup</h2>
+                <p class="text-gray-500">기본 세팅</p>
+            </div>
+            <div class="md:w-2/3">
+                <ul class="space-y-6 text-lg text-gray-300">
+                    <li class="flex items-start">
+                        <span class="text-[#ff3333] mr-4 font-bold brand-font">A</span>
+                        <div>
+                            <strong class="text-white block mb-1">Right is White</strong>
+                            오른쪽 아래 모서리 칸이 반드시 <strong class="text-white">'흰색'</strong>이 되도록 판을 놓습니다.
+                        </div>
+                    </li>
+                    <li class="flex items-start">
+                        <span class="text-[#ff3333] mr-4 font-bold brand-font">B</span>
+                        <div>
+                            <strong class="text-white block mb-1">Queen's Color</strong>
+                            퀸은 자신의 색깔 칸에 놓습니다. (백 퀸은 흰 칸, 흑 퀸은 검은 칸)
+                        </div>
+                    </li>
+                    <li class="flex items-start">
+                        <span class="text-[#ff3333] mr-4 font-bold brand-font">C</span>
+                        <div>
+                            <strong class="text-white block mb-1">Arrangement</strong>
+                            앞줄: 폰 8개<br>
+                            뒷줄: 룩 → 나이트 → 비숍 → 퀸 & 킹 → 비숍 → 나이트 → 룩
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- 3. Movements -->
+        <section class="py-24 px-6 md:px-12 border-b border-gray-800">
+            <h2 class="text-5xl font-bold uppercase brand-font mb-12">03. Movement <span class="text-base font-normal text-gray-500 normal-case tracking-normal ml-4">기물의 이동</span></h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Pawn -->
+                <div class="rule-card p-8 hoverable">
+                    <div class="piece-icon">♟️</div>
+                    <h3 class="text-2xl font-bold mb-2">Pawn (폰)</h3>
+                    <p class="text-sm text-gray-400 mb-4">병사</p>
+                    <ul class="text-sm space-y-2 text-gray-300">
+                        <li>• 앞으로 1칸 전진 (후진 불가)</li>
+                        <li>• <span class="text-[#ff3333]">처음 움직일 때만</span> 2칸 전진 가능</li>
+                        <li>• 공격은 대각선 앞 1칸만 가능</li>
+                    </ul>
+                </div>
+
+                <!-- Rook -->
+                <div class="rule-card p-8 hoverable">
+                    <div class="piece-icon">♜</div>
+                    <h3 class="text-2xl font-bold mb-2">Rook (룩)</h3>
+                    <p class="text-sm text-gray-400 mb-4">성</p>
+                    <ul class="text-sm space-y-2 text-gray-300">
+                        <li>• 십자(+) 방향으로 거리 제한 없이 이동</li>
+                        <li>• 기물을 뛰어넘을 수 없음</li>
+                    </ul>
+                </div>
+
+                <!-- Knight -->
+                <div class="rule-card p-8 hoverable">
+                    <div class="piece-icon">♞</div>
+                    <h3 class="text-2xl font-bold mb-2">Knight (나이트)</h3>
+                    <p class="text-sm text-gray-400 mb-4">기사</p>
+                    <ul class="text-sm space-y-2 text-gray-300">
+                        <li>• 'L'자 모양 이동 (직선 2칸 + 옆 1칸)</li>
+                        <li>• 유일하게 다른 기물을 <span class="text-[#ff3333]">뛰어넘을 수 있음</span></li>
+                    </ul>
+                </div>
+
+                <!-- Bishop -->
+                <div class="rule-card p-8 hoverable">
+                    <div class="piece-icon">♝</div>
+                    <h3 class="text-2xl font-bold mb-2">Bishop (비숍)</h3>
+                    <p class="text-sm text-gray-400 mb-4">주교</p>
+                    <ul class="text-sm space-y-2 text-gray-300">
+                        <li>• 대각선(X) 방향으로 거리 제한 없이 이동</li>
+                        <li>• 처음 놓인 색깔(흰색/검은색) 칸만 밟을 수 있음</li>
+                    </ul>
+                </div>
+
+                <!-- Queen -->
+                <div class="rule-card p-8 hoverable">
+                    <div class="piece-icon">♛</div>
+                    <h3 class="text-2xl font-bold mb-2">Queen (퀸)</h3>
+                    <p class="text-sm text-gray-400 mb-4">여왕</p>
+                    <ul class="text-sm space-y-2 text-gray-300">
+                        <li>• 룩 + 비숍의 능력을 모두 가짐</li>
+                        <li>• 전후좌우, 대각선 모든 방향 이동 가능</li>
+                        <li>• 가장 강력한 기물</li>
+                    </ul>
+                </div>
+
+                <!-- King -->
+                <div class="rule-card p-8 hoverable border-white">
+                    <div class="piece-icon">♚</div>
+                    <h3 class="text-2xl font-bold mb-2">King (킹)</h3>
+                    <p class="text-sm text-gray-400 mb-4">왕</p>
+                    <ul class="text-sm space-y-2 text-gray-300">
+                        <li>• 모든 방향으로 1칸씩만 이동</li>
+                        <li>• 게임의 심장. 잡히면 게임 끝.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. Special Rules -->
+        <section class="py-24 px-6 md:px-12 border-b border-gray-800 bg-[#111]">
+            <div class="mb-16">
+                <span class="text-[#ff3333] text-sm font-bold tracking-widest uppercase">Advanced Rules</span>
+                <h2 class="text-5xl font-bold uppercase brand-font mt-2">04. Special Moves</h2>
+                <p class="text-gray-500 mt-4">입문자들이 가장 헷갈려하는 3가지 특수 규칙입니다.</p>
+            </div>
+
+            <div class="space-y-12">
+                <!-- Castling -->
+                <div class="group border-l-2 border-gray-700 pl-8 hover:border-[#ff3333] transition-colors duration-500">
+                    <h3 class="text-3xl font-bold mb-4">① 캐슬링 (Castling)</h3>
+                    <p class="text-gray-400 mb-4">킹과 룩이 자리를 바꾸며 동시에 움직이는 유일한 수입니다. 킹을 안전한 구석으로 피신시킬 때 사용합니다.</p>
+                    <div class="bg-black p-6 text-sm text-gray-300 inline-block rounded">
+                        <strong class="text-white block mb-2">조건:</strong>
+                        1. 킹과 룩이 한 번도 움직이지 않았어야 함.<br>
+                        2. 킹과 룩 사이에 기물이 없어야 함.<br>
+                        3. 현재 체크 상태가 아니어야 함.
+                    </div>
+                </div>
+
+                <!-- Promotion -->
+                <div class="group border-l-2 border-gray-700 pl-8 hover:border-[#ff3333] transition-colors duration-500">
+                    <h3 class="text-3xl font-bold mb-4">② 프로모션 (Promotion)</h3>
+                    <p class="text-gray-400">가장 약한 폰이 상대방 진영 끝까지 도달하면 변신합니다.<br>주로 가장 강력한 <strong class="text-white">퀸</strong>으로 바꾸지만, 전략에 따라 나이트 등으로도 바꿀 수 있습니다.</p>
+                </div>
+
+                <!-- En Passant -->
+                <div class="group border-l-2 border-gray-700 pl-8 hover:border-[#ff3333] transition-colors duration-500">
+                    <h3 class="text-3xl font-bold mb-4">③ 앙파상 (En Passant)</h3>
+                    <p class="text-gray-400 mb-4">프랑스어로 "지나가다"라는 뜻의 특수 포획 규칙입니다.</p>
+                    <div class="bg-black p-6 text-sm text-gray-300 inline-block rounded">
+                        <strong class="text-white block mb-2">방법:</strong>
+                        내 폰이 5번째 줄에 있을 때,<br>
+                        상대 폰이 2칸 전진해서 내 옆에 딱 붙으면,<br>
+                        마치 1칸만 온 것처럼 간주하고 대각선으로 잡아먹을 수 있습니다.<br>
+                        <span class="text-[#ff3333] text-xs mt-2 block">* 상대가 2칸 움직인 '직후의 턴'에만 가능합니다.</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. Endgame -->
+        <section class="py-24 px-6 md:px-12">
+            <h2 class="text-5xl font-bold uppercase brand-font mb-12">05. Endgame</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+                <div>
+                    <h3 class="text-2xl font-bold mb-4 text-[#ff3333]">승리 (Win)</h3>
+                    <ul class="list-disc list-inside text-gray-400 space-y-2">
+                        <li><strong class="text-white">체크메이트:</strong> 상대 킹을 잡을 수밖에 없는 상태로 만듦.</li>
+                        <li><strong class="text-white">기권 (Resign):</strong> 상대가 패배를 인정함.</li>
+                        <li><strong class="text-white">시간 패:</strong> 상대방의 시간이 모두 소진됨.</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-2xl font-bold mb-4 text-gray-500">무승부 (Draw)</h3>
+                    <ul class="list-disc list-inside text-gray-400 space-y-2">
+                        <li><strong class="text-white">스테일메이트 (Stalemate):</strong> 킹이 체크 상태는 아닌데, 합법적으로 움직일 곳이 없는 경우. (초보자 주의!)</li>
+                        <li><strong class="text-white">기물 부족:</strong> 킹 vs 킹, 킹 vs 킹+나이트 등 체크메이트가 불가능한 상황.</li>
+                        <li><strong class="text-white">합의:</strong> 서로 비기기로 합의함.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="py-12 px-6 md:px-12 border-t border-gray-800 bg-[#050505]">
+            <div class="flex justify-between items-end text-sm text-gray-500 uppercase tracking-widest">
+                <!-- FIX: Changed onclick div to a tag -->
+                <a href="index.html" class="hoverable cursor-pointer hover:text-white transition-colors"><- Back to Main</a>
+                <div>Checkmate Rules v1.0</div>
+            </div>
+        </footer>
+    </main>
+
+    <script>
+        gsap.registerPlugin(ScrollTrigger);
+
+        // Custom Cursor
+        const cursorDot = document.querySelector('.cursor-dot');
+        const cursorOutline = document.querySelector('.cursor-outline');
+        window.addEventListener('mousemove', (e) => {
+            cursorDot.style.left = `${e.clientX}px`;
+            cursorDot.style.top = `${e.clientY}px`;
+            gsap.to(cursorOutline, { x: e.clientX, y: e.clientY, duration: 0.15 });
+        });
+        document.querySelectorAll('.hoverable').forEach(el => {
+            el.addEventListener('mouseenter', () => document.body.classList.add('hovering'));
+            el.addEventListener('mouseleave', () => document.body.classList.remove('hovering'));
+        });
+
+        // Animations
+        gsap.to('.hero-text', { opacity: 1, y: 0, duration: 1.5, ease: "power3.out", stagger: 0.2 });
+        
+        // Scroll Animations for Rules
+        gsap.utils.toArray('.rule-card').forEach((card, i) => {
+            gsap.from(card, {
+                scrollTrigger: {
+                    trigger: card,
+                    start: "top 90%",
+                },
+                y: 50,
+                opacity: 0,
+                duration: 0.8,
+                delay: i * 0.1
+            });
+        });
+    </script>
+</body>
+</html>
