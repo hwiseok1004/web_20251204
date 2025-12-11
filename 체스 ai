@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CHECKMATE - Arena</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- GSAP for Animations -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    
+    <!-- Chess.js Logic Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;800&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&family=Manrope:wght@200;400;600&family=Noto+Sans+KR:wght@300;500;700&display=swap');
+
+        :root {
+            --bg-color: #050505;
+            --text-color: #e0e0e0;
+            --accent: #d4af37; /* Muted Gold */
+            --board-dark: #111111;
+            --board-light: #222222;
+            --highlight: rgba(212, 175, 55, 0.3);
+            --border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Manrope', 'Noto Sans KR', sans-serif;
+            overflow: hidden; /* Game view usually fixed */
+            cursor: none; 
+        }
+
+        /* Titles */
+        h1, h2, h3, .brand-font {
+            font-family: 'Cinzel', serif;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Noise & Cursor */
+        .noise-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 9000; opacity: 0.07;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        }
+        .cursor-dot, .cursor-outline {
+            position: fixed; top: 0; left: 0; transform: translate(-50%, -50%);
+            border-radius: 50%; z-index: 9999; pointer-events: none; mix-blend-mode: exclusion;
+        }
+        .cursor-dot { width: 6px; height: 6px; background-color: #fff; }
+        .cursor-outline { width: 40px; height: 40px; border: 1px solid rgba(255, 255, 255, 0.3); transition: all 0.2s ease-out; }
+        body.hovering .cursor-outline { width: 60px; height: 60px; background-color: rgba(255, 255, 255, 0.1); border-color: #fff; }
+
+        /* Chess Board Styling */
+        #board-container {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(8, 1fr);
+            width: 100%;
+            aspect-ratio: 1/1;
+            border: 1px solid var(--accent);
+            box-shadow: 0 0 50px rgba(212, 175, 55, 0.05);
+        }
+
+        .square {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: clamp(2rem, 4vw, 4.5rem); /* Responsive piece size */
+            cursor: pointer;
+            position: relative;
+            transition: background-color 0.2s;
+        }
+
+        .square.light { background-color: var(--board-light); color: var(--board-dark); }
+        .square.dark { background-color: var(--board-dark); color: var(--board-light); }
+
+        /* Piece Colors */
+        .piece-w { color: #e0e0e0; text-shadow: 0 0 10px rgba(255,255,255,0.3); }
+        .piece-b { color: var(--accent); text-shadow: 0 0 5px rgba(0,0,0,0.8); } /* Gold Pieces for Black */
+
+        /* Highlights */
+        .square.selected { background-color: rgba(212, 175, 55, 0.4) !important; }
+        .square.highlight-move::after {
+            content: '';
+            width: 15%; height: 15%;
+            background-color: rgba(212, 175, 55, 0.5);
+            border-radius: 50%;
+            position: absolute;
+        }
+        .square.highlight-capture::after {
+            content: '';
+            width: 100%; height: 100%;
+            border: 4px solid rgba(212, 175, 55, 0.5);
+            position: absolute;
+            box-sizing: border-box;
+        }
+
+        /* UI Elements */
+        .panel-glass {
+            background: rgba(10, 10, 10, 0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-color);
+        }
+
+        .captured-piece { font-size: 1.2rem; margin-right: -4px; }
+        
+        /* Scrollbar for Moves */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #050505; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+    </style>
+</head>
+<body class="antialiased selection:bg-white selection:text-black flex h-screen flex-col">
+
+    <div class="cursor-dot"></div>
+    <div class="cursor-outline"></div>
+    <div class="noise-overlay"></div>
+
+    <!-- Navigation (Simplified) -->
+    <nav class="fixed top-0 w-full p-6 flex justify-between items-center z-50 bg-gradient-to-b from-[#050505] to-transparent">
+        <div class="flex items-center gap-4">
+            <a href="checkmate_platform.html" class="text-xl font-bold tracking-widest brand-font hoverable text-white">CHECKMATE</a>
+            <span class="text-xs text-gray-500 uppercase tracking-widest border-l border-gray-700 pl-4">Live Arena</span>
+        </div>
+        <div class="flex gap-6 text-xs uppercase tracking-[0.2em] font-cinzel">
+            <a href="checkmate_platform.html" class="hover:text-white text-gray-500 transition-colors hoverable">Exit</a>
+        </div>
+    </nav>
+
+    <!-- Main Game Layout -->
+    <main class="flex-1 flex flex-col lg:flex-row h-full pt-20 pb-6 px-6 gap-6 max-w-[1800px] mx-auto w-full">
+        
+        <!-- Left: Game Board -->
+        <div class="flex-1 flex justify-center items-center relative">
+            <div class="w-full max-w-[85vh] aspect-square relative">
+                <!-- Player Info (Top - Opponent) -->
+                <div class="absolute -top-12 left-0 w-full flex justify-between items-center text-sm mb-2">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 bg-gray-800 rounded-full border border-gray-600 flex items-center justify-center text-[#d4af37]">AI</div>
+                        <div>
+                            <span class="block text-gray-300 font-cinzel">Grandmaster AI</span>
+                            <span class="text-xs text-gray-600">Rating: 3200</span>
+                        </div>
+                    </div>
+                    <div id="timer-b" class="bg-[#111] px-4 py-2 border border-gray-800 text-2xl font-mono text-gray-400 rounded">10:00</div>
+                </div>
+
+                <!-- THE BOARD -->
+                <div id="board-container">
+                    <!-- Squares will be generated by JS -->
+                </div>
+
+                <!-- Player Info (Bottom - You) -->
+                <div class="absolute -bottom-12 left-0 w-full flex justify-between items-center text-sm mt-2">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 bg-gray-200 rounded-full border border-white flex items-center justify-center text-black font-bold">You</div>
+                        <div>
+                            <span class="block text-white font-cinzel">Architect</span>
+                            <span class="text-xs text-gray-500">Rating: 1200</span>
+                        </div>
+                    </div>
+                    <div id="timer-w" class="bg-[#222] px-4 py-2 border border-white/20 text-2xl font-mono text-white rounded shadow-[0_0_15px_rgba(255,255,255,0.1)]">10:00</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Sidebar / Analysis -->
+        <aside class="w-full lg:w-[400px] flex flex-col gap-4">
+            
+            <!-- Game Status -->
+            <div class="panel-glass p-6 rounded-lg">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl brand-font text-white">Match Status</h2>
+                    <span id="turn-indicator" class="text-xs uppercase tracking-widest bg-white text-black px-2 py-1 font-bold">White to Move</span>
+                </div>
+                <div class="h-[1px] w-full bg-gradient-to-r from-transparent via-gray-700 to-transparent mb-4"></div>
+                <div class="flex justify-between text-xs text-gray-500 uppercase tracking-widest mb-2">
+                    <span>Captured</span>
+                </div>
+                <div class="flex flex-col gap-2 min-h-[40px]">
+                    <div id="captured-w" class="text-white opacity-80 h-6"></div> <!-- Captured by White -->
+                    <div id="captured-b" class="text-[#d4af37] opacity-80 h-6"></div> <!-- Captured by Black -->
+                </div>
+            </div>
+
+            <!-- Move History -->
+            <div class="panel-glass flex-1 rounded-lg flex flex-col overflow-hidden">
+                <div class="p-4 bg-[#111] border-b border-gray-800 flex justify-between items-center">
+                    <span class="text-xs uppercase tracking-widest text-gray-400">Move History</span>
+                    <span class="text-xs text-gray-600">Standard Match</span>
+                </div>
+                <div id="move-history" class="flex-1 overflow-y-auto p-0 font-mono text-sm">
+                    <table class="w-full text-left border-collapse">
+                        <tbody id="move-list-body" class="divide-y divide-gray-800/50">
+                            <!-- Moves generated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Controls -->
+            <div class="panel-glass p-6 rounded-lg grid grid-cols-2 gap-4">
+                <button onclick="resetGame()" class="col-span-2 border border-gray-600 hover:bg-white hover:text-black hover:border-white text-gray-300 py-3 uppercase text-xs tracking-[0.2em] transition-all hoverable">
+                    New Game
+                </button>
+                <button class="border border-gray-800 text-gray-600 py-3 uppercase text-xs tracking-[0.2em] cursor-not-allowed" disabled>
+                    Offer Draw
+                </button>
+                <button class="border border-gray-800 text-gray-600 py-3 uppercase text-xs tracking-[0.2em] hover:bg-red-900/30 hover:text-red-400 hover:border-red-900 transition-colors hoverable">
+                    Resign
+                </button>
+            </div>
+            
+        </aside>
+    </main>
+
+    <script>
+        // --- 1. CONFIGURATION & STATE ---
+        const boardEl = document.getElementById('board-container');
+        const game = new Chess();
+        let selectedSquare = null;
+        let whiteTimer = 600; // 10 minutes in seconds
+        let blackTimer = 600;
+        let timerInterval = null;
+        let isGameActive = false;
+
+        // Unicode Pieces mapping
+        const pieces = {
+            'p': '♟', 'r': '♜', 'n': '♞', 'b': '♝', 'q': '♛', 'k': '♚',
+            'P': '♟', 'R': '♜', 'N': '♞', 'B': '♝', 'Q': '♛', 'K': '♚'
+        };
+
+        // --- 2. BOARD RENDERING ---
+        function createBoard() {
+            boardEl.innerHTML = '';
+            const boardState = game.board();
+
+            for (let row = 0; row < 8; row++) {
+                for (let col = 0; col < 8; col++) {
+                    const squareCode = String.fromCharCode(97 + col) + (8 - row); // e.g., "a8"
+                    const squareEl = document.createElement('div');
+                    
+                    // Style class
+                    const isLight = (row + col) % 2 === 0;
+                    squareEl.className = `square ${isLight ? 'light' : 'dark'} hoverable`;
+                    squareEl.dataset.square = squareCode;
+                    squareEl.id = `sq-${squareCode}`;
+
+                    // Piece logic
+                    const piece = boardState[row][col];
+                    if (piece) {
+                        const pieceSpan = document.createElement('span');
+                        pieceSpan.textContent = pieces[piece.type]; // Use type to get unicode
+                        // Class based on color: w or b
+                        pieceSpan.className = `piece-${piece.color}`; 
+                        squareEl.appendChild(pieceSpan);
+                    }
+
+                    // Event Listener
+                    squareEl.addEventListener('click', () => onSquareClick(squareCode));
+                    
+                    boardEl.appendChild(squareEl);
+                }
+            }
+            updateStatus();
+        }
+
+        // --- 3. GAME LOGIC ---
+        function onSquareClick(square) {
+            if (!isGameActive) return;
+
+            // If a square is already selected
+            if (selectedSquare) {
+                // Try to move
+                const move = game.move({
+                    from: selectedSquare,
+                    to: square,
+                    promotion: 'q' // Always promote to queen for simplicity
+                });
+
+                // If move is valid
+                if (move) {
+                    selectedSquare = null;
+                    createBoard(); // Re-render
+                    highlightMove(move.from, move.to);
+                    updateHistory(move);
+                    checkGameOver();
+                    
+                    // Switch timer
+                    if (!game.game_over()) {
+                         // AI Move (Simple Random)
+                         setTimeout(makeRandomMove, 500);
+                    }
+                } else {
+                    // Invalid move, check if clicking on another own piece to select it
+                    const piece = game.get(square);
+                    if (piece && piece.color === game.turn()) {
+                        selectedSquare = square;
+                        highlightSelection();
+                    } else {
+                        selectedSquare = null; // Deselect
+                        removeHighlights();
+                    }
+                }
+            } else {
+                // Select a piece
+                const piece = game.get(square);
+                if (piece && piece.color === game.turn()) {
+                    // Only allow selecting White pieces for player (in this demo)
+                    // But if we want Hotseat, allow both. Let's force player to play White for AI demo.
+                    if (piece.color === 'w') { 
+                        selectedSquare = square;
+                        highlightSelection();
+                    }
+                }
+            }
+        }
+
+        function makeRandomMove() {
+            if (game.game_over()) return;
+
+            const moves = game.moves();
+            const move = moves[Math.floor(Math.random() * moves.length)];
+            game.move(move);
+            
+            createBoard();
+            
+            // Highlight AI move
+            const history = game.history({ verbose: true });
+            const lastMove = history[history.length - 1];
+            highlightMove(lastMove.from, lastMove.to);
+            
+            updateHistory(lastMove);
+            checkGameOver();
+        }
+
+        // --- 4. VISUAL HELPERS ---
+        function highlightSelection() {
+            removeHighlights();
+            // Highlight selected square
+            document.getElementById(`sq-${selectedSquare}`).classList.add('selected');
+
+            // Highlight legal moves
+            const moves = game.moves({ square: selectedSquare, verbose: true });
+            moves.forEach(move => {
+                const el = document.getElementById(`sq-${move.to}`);
+                if (move.flags.includes('c') || move.flags.includes('e')) {
+                    el.classList.add('highlight-capture');
+                } else {
+                    el.classList.add('highlight-move');
+                }
+            });
+        }
+
+        function highlightMove(from, to) {
+            removeHighlights();
+            document.getElementById(`sq-${from}`).classList.add('selected');
+            document.getElementById(`sq-${to}`).classList.add('selected');
+        }
+
+        function removeHighlights() {
+            document.querySelectorAll('.square').forEach(el => {
+                el.classList.remove('selected', 'highlight-move', 'highlight-capture');
+            });
+        }
+
+        function updateStatus() {
+            const turnEl = document.getElementById('turn-indicator');
+            const turn = game.turn() === 'w' ? 'White' : 'Black';
+            
+            if (game.in_checkmate()) {
+                turnEl.textContent = `Checkmate! ${game.turn() === 'w' ? 'Black' : 'White'} Wins`;
+                turnEl.classList.replace('bg-white', 'bg-[#d4af37]');
+                turnEl.classList.replace('text-black', 'text-white');
+                isGameActive = false;
+                clearInterval(timerInterval);
+            } else if (game.in_draw()) {
+                turnEl.textContent = 'Draw';
+                isGameActive = false;
+                clearInterval(timerInterval);
+            } else {
+                turnEl.textContent = `${turn} to Move`;
+                if (game.in_check()) {
+                    turnEl.textContent += " (Check!)";
+                    turnEl.classList.add('text-red-500');
+                } else {
+                    turnEl.classList.remove('text-red-500');
+                }
+            }
+        }
+
+        function updateHistory(move) {
+            const historyBody = document.getElementById('move-list-body');
+            const moveNumber = Math.ceil(game.history().length / 2);
+            
+            if (move.color === 'w') {
+                const row = document.createElement('tr');
+                row.className = 'border-b border-gray-800/30 hover:bg-white/5 transition-colors';
+                row.id = `move-row-${moveNumber}`;
+                row.innerHTML = `
+                    <td class="p-2 w-12 text-gray-500 text-xs border-r border-gray-800/50 text-center">${moveNumber}.</td>
+                    <td class="p-2 w-1/2 text-gray-300">${move.san}</td>
+                    <td class="p-2 w-1/2 text-[#d4af37]"></td>
+                `;
+                historyBody.appendChild(row);
+            } else {
+                const row = document.getElementById(`move-row-${moveNumber}`);
+                if (row) {
+                    row.children[2].textContent = move.san;
+                }
+            }
+
+            // Scroll to bottom
+            const historyContainer = document.getElementById('move-history');
+            historyContainer.scrollTop = historyContainer.scrollHeight;
+            
+            // Update Captured
+            updateCaptured();
+        }
+
+        function updateCaptured() {
+             // Simple visual counter, accurate list requires tracking state diff
+             // This is a mockup for visual purposes
+        }
+
+        // --- 5. TIMER & CONTROLS ---
+        function startTimer() {
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                if (!isGameActive) return;
+                
+                if (game.turn() === 'w') {
+                    whiteTimer--;
+                    updateTimerDisplay('w', whiteTimer);
+                } else {
+                    blackTimer--;
+                    updateTimerDisplay('b', blackTimer);
+                }
+
+                if (whiteTimer <= 0 || blackTimer <= 0) {
+                    isGameActive = false;
+                    clearInterval(timerInterval);
+                    alert("Time's up!");
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplay(color, seconds) {
+            const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+            const s = (seconds % 60).toString().padStart(2, '0');
+            const el = document.getElementById(`timer-${color}`);
+            el.textContent = `${m}:${s}`;
+            
+            // Visual active state
+            const wTimer = document.getElementById('timer-w');
+            const bTimer = document.getElementById('timer-b');
+            
+            if (color === 'w') {
+                wTimer.classList.add('bg-white', 'text-black');
+                wTimer.classList.remove('bg-[#222]', 'text-white');
+                bTimer.classList.remove('bg-gray-200', 'text-black');
+                bTimer.classList.add('bg-[#111]', 'text-gray-400');
+            } else {
+                bTimer.classList.add('bg-gray-200', 'text-black');
+                bTimer.classList.remove('bg-[#111]', 'text-gray-400');
+                wTimer.classList.remove('bg-white', 'text-black');
+                wTimer.classList.add('bg-[#222]', 'text-white');
+            }
+        }
+
+        function resetGame() {
+            game.reset();
+            whiteTimer = 600;
+            blackTimer = 600;
+            updateTimerDisplay('w', whiteTimer);
+            updateTimerDisplay('b', blackTimer);
+            document.getElementById('move-list-body').innerHTML = '';
+            document.getElementById('turn-indicator').textContent = 'White to Move';
+            document.getElementById('turn-indicator').className = 'text-xs uppercase tracking-widest bg-white text-black px-2 py-1 font-bold';
+            selectedSquare = null;
+            isGameActive = true;
+            createBoard();
+            startTimer();
+        }
+
+        function checkGameOver() {
+            if (game.game_over()) {
+                isGameActive = false;
+                updateStatus();
+            }
+        }
+
+        // --- 6. INITIALIZATION & CURSOR ---
+        window.addEventListener('load', () => {
+            resetGame();
+        });
+
+        // Custom Cursor Logic (Copied from Rules/Home)
+        const cursorDot = document.querySelector('.cursor-dot');
+        const cursorOutline = document.querySelector('.cursor-outline');
+        
+        window.addEventListener('mousemove', (e) => {
+            const posX = e.clientX;
+            const posY = e.clientY;
+            cursorDot.style.left = `${posX}px`;
+            cursorDot.style.top = `${posY}px`;
+            
+            gsap.to(cursorOutline, { 
+                x: posX, y: posY, duration: 0.15, ease: "power2.out" 
+            });
+        });
+
+        // Hover listeners for dynamic elements needs delegation or re-adding
+        // Using global listener for simplicity
+        document.body.addEventListener('mouseover', (e) => {
+            if (e.target.classList.contains('hoverable') || e.target.closest('.hoverable')) {
+                document.body.classList.add('hovering');
+            } else {
+                document.body.classList.remove('hovering');
+            }
+        });
+
+    </script>
+</body>
+</html>
