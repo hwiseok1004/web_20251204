@@ -1,7 +1,7 @@
 # ♟️ THE GRAND CHESS – Art of Strategy
 
 > **Timeless Strategy. Cinematic Experience.**
-> 체스의 역사·예술·전략을 하나의 고급 웹 경험으로 재해석한 인터랙티브 체스 플랫폼
+> 체스의 역사·예술·전략을 하나의 고급 웹 경험으로 재해석한 인터랙티브 체스 플랫폼 (!pc 화면 비율로 구현!)
 
 ---
 
